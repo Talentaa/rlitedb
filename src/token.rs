@@ -2,17 +2,18 @@
 pub enum Token {
     Ident(String),
     Numberic(f64),
+    StringLiteral(String),
 
     Plus,  // +
     Minus, // -
     Mul,   // *
     Div,   // /
 
-    LT, // <
-    GT, // >
+    NE, // != or <>
     LE, // <=
     GE, // >=
-    NE, // != or <>
+    LT, // <
+    GT, // >
     EQ, // == or =
 
     Select, // SELECT
@@ -25,8 +26,8 @@ pub enum Token {
     From,   // FROM
     Values, // VALUES
     Where,  // WHERE
-    AND,    // AND
-    OR,     // OR
+    And,    // AND
+    Or,     // OR
 
     LParen,    // (
     RParen,    // )
