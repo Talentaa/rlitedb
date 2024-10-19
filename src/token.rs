@@ -1,8 +1,7 @@
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Ident(String),
-    Integer(i64),
-    FloatPoint(f64),
+    Numberic(f64),
 
     Plus,  // +
     Minus, // -

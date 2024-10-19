@@ -119,17 +119,13 @@ fn ident(input: &str) -> IResult<&str, Token> {
     map(alpha1, |s: &str| Token::Ident(s.to_string())).parse(input)
 }
 
-fn integer(input: &str) -> IResult<&str, Token> {
-    map_res(digit1, |s: &str| {
-        s.parse::<i64>().map(|i| Token::Integer(i))
-    })
-    .parse(input)
+fn numberic(input: &str) -> IResult<&str, Token> {
+    map(double, |f: f64| Token::Numberic(f)).parse(input)
 }
 
 fn token(input: &str) -> IResult<&str, Token> {
-    let floatpoint = map(double, |f: f64| Token::FloatPoint(f));
 
-    alt((operator, punctuation, keyword, ident, floatpoint, integer)).parse(input)
+    alt((operator, punctuation, keyword, ident, numberic)).parse(input)
 }
 
 fn tokens(input: &str) -> IResult<&str, Vec<Token>> {
@@ -195,7 +191,7 @@ mod tests {
             Token::Where,
             Token::Ident("age".to_string()),
             Token::GT,
-            Token::Integer(10),
+            Token::Numberic(10f64),
             Token::SemiColon,
         ];
 
@@ -216,11 +212,11 @@ mod tests {
             Token::Where,
             Token::Ident("age".to_string()),
             Token::GT,
-            Token::Integer(10),
+            Token::Numberic(10f64),
             Token::AND,
             Token::Ident("weight".to_string()),
             Token::LT,
-            Token::Integer(60),
+            Token::Numberic(60f64),
             Token::SemiColon,
         ];
 
@@ -239,11 +235,11 @@ mod tests {
             Token::Where,
             Token::Ident("age".to_string()),
             Token::GT,
-            Token::Integer(10),
+            Token::Numberic(10f64),
             Token::OR,
             Token::Ident("weight".to_string()),
             Token::LT,
-            Token::Integer(60),
+            Token::Numberic(60f64),
             Token::SemiColon,
         ];
 
@@ -262,7 +258,7 @@ mod tests {
             Token::Where,
             Token::Ident("rate".to_string()),
             Token::LT,
-            Token::FloatPoint(1.0),
+            Token::Numberic(1.0),
             Token::SemiColon,
         ];
 
