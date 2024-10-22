@@ -53,7 +53,6 @@ define_token!(right_arrow, "->", Token::RightArrow);
 define_token!(double_colon, "::", Token::DoubleColon);
 define_token!(double_period, "..", Token::DoublePeriod);
 
-
 define_token!(ADD, "ADD", Token::Add);
 define_token!(ALL, "ALL", Token::All);
 define_token!(ALLOCATE, "ALLOCATE", Token::Allocate);
@@ -98,12 +97,24 @@ define_token!(CROSS, "CROSS", Token::Cross);
 define_token!(CUBE, "CUBE", Token::Cube);
 define_token!(CURRENT, "CURRENT", Token::Current);
 define_token!(CURRENT_DATE, "CURRENT_DATE", Token::CurrentDate);
-define_token!(CURRENT_DEFAULT_TRANSFORM_GROUP, "CURRENT_DEFAULT_TRANSFORM_GROUP", Token::CurrentDefaultTransformGroup);
+define_token!(
+    CURRENT_DEFAULT_TRANSFORM_GROUP,
+    "CURRENT_DEFAULT_TRANSFORM_GROUP",
+    Token::CurrentDefaultTransformGroup
+);
 define_token!(CURRENT_PATH, "CURRENT_PATH", Token::CurrentPath);
 define_token!(CURRENT_ROLE, "CURRENT_ROLE", Token::CurrentRole);
 define_token!(CURRENT_TIME, "CURRENT_TIME", Token::CurrentTime);
-define_token!(CURRENT_TIMESTAMP, "CURRENT_TIMESTAMP", Token::CurrentTimestamp);
-define_token!(CURRENT_TRANSFORM_GROUP_FOR_TYPE, "CURRENT_TRANSFORM_GROUP_FOR_TYPE", Token::CurrentTransformGroupForType);
+define_token!(
+    CURRENT_TIMESTAMP,
+    "CURRENT_TIMESTAMP",
+    Token::CurrentTimestamp
+);
+define_token!(
+    CURRENT_TRANSFORM_GROUP_FOR_TYPE,
+    "CURRENT_TRANSFORM_GROUP_FOR_TYPE",
+    Token::CurrentTransformGroupForType
+);
 define_token!(CURRENT_USER, "CURRENT_USER", Token::CurrentUser);
 define_token!(CURSOR, "CURSOR", Token::Cursor);
 define_token!(CYCLE, "CYCLE", Token::Cycle);
