@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq)]
 pub enum Token {
-    Space,                        //
+    Space,                        // 123312123312
     DoubleQuote,                  // "
     Percent,                      // %
     Ampersand,                    // &
@@ -30,7 +30,7 @@ pub enum Token {
     RightBrace,                   // }
     NotEqualsOperator,            // <>
     GreaterThanOrEqualsOperator,  // >=
-    LessThanOrEqualsOperator,     // >=
+    LessThanOrEqualsOperator,     // <=
     ConcatenationOperator,        // ||
     RightArrow,                   // ->
     DoubleColon,                  // ::
