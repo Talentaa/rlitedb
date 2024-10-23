@@ -7,6 +7,7 @@ use nom::{InputIter, InputLength, InputTake, Needed, Slice};
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
+    Identifier(String),           // Identifier
     Space,                        // here shoule be empty
     DoubleQuote,                  // "
     Percent,                      // %

@@ -1,7 +1,11 @@
 use crate::token::Token;
 use nom::{
-    bytes::complete::{tag, tag_no_case},
-    combinator::map,
+    branch::alt,
+    bytes::complete::{is_not, tag, tag_no_case, take},
+    character::complete::{alpha1, alphanumeric1},
+    combinator::{map, opt, recognize},
+    multi::{many0_count, many1_count},
+    sequence::{pair, tuple},
     IResult, Parser,
 };
 
@@ -22,6 +26,7 @@ macro_rules! define_token_no_case {
     };
 }
 
+// Punctuation mark
 define_token!(double_quote, "\"", Token::DoubleQuote);
 define_token!(percent, "%", Token::Percent);
 define_token!(ampersand, "&", Token::Ampersand);
@@ -65,6 +70,7 @@ define_token!(right_arrow, "->", Token::RightArrow);
 define_token!(double_colon, "::", Token::DoubleColon);
 define_token!(double_period, "..", Token::DoublePeriod);
 
+// Keywords
 define_token_no_case!(ADD, "ADD", Token::Add);
 define_token_no_case!(ALL, "ALL", Token::All);
 define_token_no_case!(ALLOCATE, "ALLOCATE", Token::Allocate);
@@ -323,3 +329,106 @@ define_token_no_case!(WITH, "WITH", Token::With);
 define_token_no_case!(WITHIN, "WITHIN", Token::Within);
 define_token_no_case!(WITHOUT, "WITHOUT", Token::Without);
 define_token_no_case!(YEAR, "YEAR", Token::Year);
+
+fn identifier(input: &str) -> IResult<&str, Token> {
+    map(actual_identifier, |ident: &str| {
+        Token::Identifier(ident.to_string())
+    })
+    .parse(input)
+}
+
+fn regular_identifier(input: &str) -> IResult<&str, &str> {
+    identifier_body.parse(input)
+}
+
+fn identifier_body(input: &str) -> IResult<&str, &str> {
+    recognize(pair(identifier_start, opt(identifier_part))).parse(input)
+}
+
+fn identifier_start(input: &str) -> IResult<&str, &str> {
+    alt((alpha1, recognize(underscore))).parse(input)
+}
+
+fn identifier_part(input: &str) -> IResult<&str, &str> {
+    alt((identifier_start, identifier_extend)).parse(input)
+}
+
+fn identifier_extend(input: &str) -> IResult<&str, &str> {
+    recognize(many0_count(alt((alphanumeric1, recognize(underscore))))).parse(input)
+}
+
+// TODO
+fn actual_identifier(input: &str) -> IResult<&str, &str> {
+    alt((regular_identifier, delimited_identifier)).parse(input)
+}
+
+fn delimited_identifier(input: &str) -> IResult<&str, &str> {
+    recognize(tuple((
+        double_quote,
+        delimited_identifier_body,
+        double_quote,
+    )))
+    .parse(input)
+}
+
+fn delimited_identifier_body(input: &str) -> IResult<&str, &str> {
+    recognize(many1_count(delimited_identifier_part)).parse(input)
+}
+
+fn delimited_identifier_part(input: &str) -> IResult<&str, &str> {
+    alt((nondoublequote_character, doublequote_symbol)).parse(input)
+}
+
+fn nondoublequote_character(input: &str) -> IResult<&str, &str> {
+    is_not("\"").and_then(take(1usize)).parse(input)
+}
+
+fn doublequote_symbol(input: &str) -> IResult<&str, &str> {
+    recognize(pair(double_quote, double_quote)).parse(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::token::Token;
+
+    use super::identifier;
+
+    #[test]
+    fn test_identifier_1() {
+        let input = "\"\"\"\"";
+        let (_, res) = identifier(input).unwrap();
+        let expected = Token::Identifier("\"\"\"\"".to_string());
+        assert_eq!(res, expected);
+    }
+
+    #[test]
+    fn test_identifier_2() {
+        let input = "\"\"\"\"\"\"";
+        let (_, res) = identifier(input).unwrap();
+        let expected = Token::Identifier("\"\"\"\"\"\"".to_string());
+        assert_eq!(res, expected);
+    }
+
+    #[test]
+    fn test_identifier_3() {
+        let input = "\"identifier\"";
+        let (_, res) = identifier(input).unwrap();
+        let expected = Token::Identifier("\"identifier\"".to_string());
+        assert_eq!(res, expected);
+    }
+
+    #[test]
+    fn test_identifier_4() {
+        let input = "\"\"\"identifier\"\"\"";
+        let (_, res) = identifier(input).unwrap();
+        let expected = Token::Identifier("\"\"\"identifier\"\"\"".to_string());
+        assert_eq!(res, expected);
+    }
+    #[test]
+    fn test_identifier_5() {
+        let input = "\"identifier1\"\"identifier2\"";
+        let (_, res) = identifier(input).unwrap();
+        let expected = Token::Identifier("\"identifier1\"\"identifier2\"".to_string());
+        assert_eq!(res, expected);
+    }
+}
