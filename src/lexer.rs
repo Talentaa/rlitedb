@@ -2,7 +2,7 @@ use crate::token::Token;
 use nom::{
     branch::alt,
     bytes::complete::{is_not, tag, tag_no_case, take},
-    character::complete::{alpha1, alphanumeric1},
+    character::complete::{alpha1, alphanumeric1, digit1},
     combinator::{map, opt, recognize},
     multi::{many0_count, many1_count},
     sequence::{pair, tuple},
@@ -11,6 +11,7 @@ use nom::{
 
 macro_rules! define_token {
     ($name:ident, $tag:expr, $token:expr) => {
+        #[allow(dead_code)]
         fn $name(input: &str) -> IResult<&str, Token> {
             map(tag($tag), |_| $token).parse(input)
         }
@@ -19,7 +20,7 @@ macro_rules! define_token {
 
 macro_rules! define_token_no_case {
     ($name:ident, $tag:expr, $token:expr) => {
-        #[allow(non_snake_case)]
+        #[allow(non_snake_case, dead_code)]
         fn $name(input: &str) -> IResult<&str, Token> {
             map(tag_no_case($tag), |_| $token).parse(input)
         }
@@ -330,6 +331,7 @@ define_token_no_case!(WITHIN, "WITHIN", Token::Within);
 define_token_no_case!(WITHOUT, "WITHOUT", Token::Without);
 define_token_no_case!(YEAR, "YEAR", Token::Year);
 
+// Identifier Token
 fn identifier(input: &str) -> IResult<&str, Token> {
     map(actual_identifier, |ident: &str| {
         Token::Identifier(ident.to_string())
@@ -357,7 +359,6 @@ fn identifier_extend(input: &str) -> IResult<&str, &str> {
     recognize(many0_count(alt((alphanumeric1, recognize(underscore))))).parse(input)
 }
 
-// TODO
 fn actual_identifier(input: &str) -> IResult<&str, &str> {
     alt((regular_identifier, delimited_identifier)).parse(input)
 }
@@ -385,6 +386,115 @@ fn nondoublequote_character(input: &str) -> IResult<&str, &str> {
 
 fn doublequote_symbol(input: &str) -> IResult<&str, &str> {
     recognize(pair(double_quote, double_quote)).parse(input)
+}
+
+
+// Literal Token
+fn literal(input: &str) -> IResult<&str, &str> {
+    // signed_numeric_literal | general_literal
+    alt((signed_numeric_literal, general_literal)).parse(input)
+}
+
+// TODO
+fn general_literal(input: &str) -> IResult<&str, &str> {
+    // character_string_literal
+    // | national_character_string_literal
+    // | Unicode_character_string_literal
+    // | binary_string_literal
+    // | datetime_literal
+    // | interval_literal
+    // | boolean_literal
+    character_string_literal.parse(input)
+}
+
+fn character_string_literal(input: &str) -> IResult<&str, &str> {
+    // ( introducer character_set_specification )?
+    // quote ( character_representation )? quote
+    // ( separator quote ( character_representation )? quote )*
+    // character_string_literal.parse(input)
+    alt((
+        opt(pair(introducer, character_set_specification)),
+        tuple((quote, opt(character_representation), quote)),
+        many0_count(tuple((
+            separator,
+            quote,
+            opt(character_representation),
+            quote,
+        ))),
+    ))
+    .parse(input)
+}
+
+fn introducer(input: &str) -> IResult<&str, &str> {
+    // underscore
+    recognize(underscore).parse(input)
+}
+
+fn character_representation(input: &str) -> IResult<&str, &str> {
+    // nonquote_character | quote_symbol
+    alt((nonquote_character, quote_symbol)).parse(input)
+}
+
+fn nonquote_character(input: &str) -> IResult<&str, &str> {
+    is_not("'").and_then(take(1usize)).parse(input)
+}
+
+fn quote_symbol(input: &str) -> IResult<&str, &str> {
+    // quote quote
+    recognize(pair(quote, quote)).parse(input)
+}
+
+fn signed_numeric_literal(input: &str) -> IResult<&str, &str> {
+    // sign? unsigned_numeric_literal
+    recognize(pair(opt(sign), unsigned_numeric_literal)).parse(input)
+}
+
+fn unsigned_numeric_literal(input: &str) -> IResult<&str, &str> {
+    // exact_numeric_literal | approximate_numeric_literal
+    alt((exact_numeric_literal, approximate_numeric_literal)).parse(input)
+}
+
+fn exact_numeric_literal(input: &str) -> IResult<&str, &str> {
+    alt((
+        // unsigned_integer ( period unsigned_integer? )?
+        recognize(pair(
+            unsigned_integer,
+            opt(pair(period, opt(unsigned_integer))),
+        )),
+        // period unsigned_integer
+        recognize(pair(period, unsigned_integer)),
+    ))
+    .parse(input)
+}
+
+fn sign(input: &str) -> IResult<&str, &str> {
+    // plus_sign | minus_sign
+    recognize(alt((plus_sign, minus_sign))).parse(input)
+}
+
+fn approximate_numeric_literal(input: &str) -> IResult<&str, &str> {
+    // mantissa E exponent
+    recognize(tuple((mantissa, tag("E"), exponent))).parse(input)
+}
+
+fn mantissa(input: &str) -> IResult<&str, &str> {
+    // exact_numeric_literal
+    exact_numeric_literal.parse(input)
+}
+
+fn exponent(input: &str) -> IResult<&str, &str> {
+    // signed_integer
+    signed_integer.parse(input)
+}
+
+fn signed_integer(input: &str) -> IResult<&str, &str> {
+    // sign? unsigned_integer
+    recognize(pair(opt(sign), unsigned_integer)).parse(input)
+}
+
+fn unsigned_integer(input: &str) -> IResult<&str, &str> {
+    // digit ...
+    digit1.parse(input)
 }
 
 #[cfg(test)]
