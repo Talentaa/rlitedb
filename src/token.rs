@@ -9,6 +9,7 @@ use nom::{InputIter, InputLength, InputTake, Needed, Slice};
 pub enum Token {
     Identifier(String),           // Identifier
     Literal(String),              // Literal
+    LargeObjectLength(String),    // Large Object Length
     Space,                        // here shoule be empty
     DoubleQuote,                  // "
     Percent,                      // %
@@ -289,7 +290,7 @@ pub enum Token {
     With,                         // WITH
     Within,                       // WITHIN
     Without,                      // WITHOUT
-    Year,                         // YEAR
+    Year,                         // YEAR,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]

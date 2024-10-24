@@ -2,18 +2,18 @@ use crate::token::Token;
 use nom::{
     branch::alt,
     bytes::complete::{is_not, tag, tag_no_case, take},
-    character::complete::{alpha1, alphanumeric1, digit1},
+    character::complete::{alpha1, alphanumeric1, digit1, multispace1, newline, space1},
     combinator::{map, opt, recognize},
     multi::{many0_count, many1_count},
     sequence::{pair, tuple},
     IResult, Parser,
 };
 
-macro_rules! define_token {
-    ($name:ident, $tag:expr, $token:expr) => {
+macro_rules! define_parse {
+    ($name:ident, $tag:expr) => {
         #[allow(dead_code)]
-        fn $name(input: &str) -> IResult<&str, Token> {
-            map(tag($tag), |_| $token).parse(input)
+        fn $name(input: &str) -> IResult<&str, &str> {
+            tag($tag).parse(input)
         }
     };
 }
@@ -28,48 +28,40 @@ macro_rules! define_token_no_case {
 }
 
 // Punctuation mark
-define_token!(double_quote, "\"", Token::DoubleQuote);
-define_token!(percent, "%", Token::Percent);
-define_token!(ampersand, "&", Token::Ampersand);
-define_token!(quote, "'", Token::Quote);
-define_token!(left_paren, "(", Token::LeftParen);
-define_token!(right_paren, ")", Token::RightParen);
-define_token!(asterisk, "*", Token::Asterisk);
-define_token!(plus_sign, "+", Token::PlusSign);
-define_token!(comma, ",", Token::Comma);
-define_token!(minus_sign, "-", Token::MinusSign);
-define_token!(period, ".", Token::Period);
-define_token!(solidus, "/", Token::Solidus);
-define_token!(colon, ":", Token::Colon);
-define_token!(semicolon, ";", Token::Semicolon);
-define_token!(less_than_operator, "<", Token::LessThanOperator);
-define_token!(equals_operator, "=", Token::EqualsOperator);
-define_token!(greater_than_operator, ">", Token::GreaterThanOperator);
-define_token!(question_mark, "?", Token::QuestionMark);
-define_token!(left_bracket, "[", Token::LeftBracket);
-define_token!(left_bracket_trigraph, "??(", Token::LeftBracketTrigraph);
-define_token!(right_bracket, "]", Token::RightBracket);
-define_token!(right_bracket_trigraph, "??)", Token::RightBracketTrigraph);
-define_token!(circumflex, "^", Token::Circumflex);
-define_token!(underscore, "_", Token::Underscore);
-define_token!(vertical_bar, "|", Token::VerticalBar);
-define_token!(left_brace, "{", Token::LeftBrace);
-define_token!(right_brace, "}", Token::RightBrace);
-define_token!(not_equals_operator, "<>", Token::NotEqualsOperator);
-define_token!(
-    greater_than_or_equals_operator,
-    ">=",
-    Token::GreaterThanOrEqualsOperator
-);
-define_token!(
-    less_than_or_equals_operator,
-    ">=",
-    Token::LessThanOrEqualsOperator
-);
-define_token!(concatenation_operator, "||", Token::ConcatenationOperator);
-define_token!(right_arrow, "->", Token::RightArrow);
-define_token!(double_colon, "::", Token::DoubleColon);
-define_token!(double_period, "..", Token::DoublePeriod);
+define_parse!(double_quote, "\"");
+define_parse!(percent, "%");
+define_parse!(ampersand, "&");
+define_parse!(quote, "'");
+define_parse!(left_paren, "(");
+define_parse!(right_paren, ")");
+define_parse!(asterisk, "*");
+define_parse!(plus_sign, "+");
+define_parse!(comma, ",");
+define_parse!(minus_sign, "-");
+define_parse!(period, ".");
+define_parse!(solidus, "/");
+define_parse!(colon, ":");
+define_parse!(semicolon, ";");
+define_parse!(less_than_operator, "<");
+define_parse!(equals_operator, "=");
+define_parse!(greater_than_operator, ">");
+define_parse!(question_mark, "?");
+define_parse!(left_bracket, "[");
+define_parse!(left_bracket_trigraph, "??(");
+define_parse!(right_bracket, "]");
+define_parse!(right_bracket_trigraph, "??)");
+define_parse!(circumflex, "^");
+define_parse!(underscore, "_");
+define_parse!(vertical_bar, "|");
+define_parse!(left_brace, "{");
+define_parse!(right_brace, "}");
+define_parse!(not_equals_operator, "<>");
+define_parse!(greater_than_or_equals_operator, ">=");
+define_parse!(less_than_or_equals_operator, "<=");
+define_parse!(concatenation_operator, "||");
+define_parse!(right_arrow, "->");
+define_parse!(double_colon, "::");
+define_parse!(double_period, "..");
 
 // Keywords
 define_token_no_case!(ADD, "ADD", Token::Add);
@@ -331,39 +323,78 @@ define_token_no_case!(WITHIN, "WITHIN", Token::Within);
 define_token_no_case!(WITHOUT, "WITHOUT", Token::Without);
 define_token_no_case!(YEAR, "YEAR", Token::Year);
 
-// Identifier Token
-fn identifier(input: &str) -> IResult<&str, Token> {
-    map(actual_identifier, |ident: &str| {
-        Token::Identifier(ident.to_string())
-    })
+// Token
+pub fn token(input: &str) -> IResult<&str, Token> {
+    // nondelimiter_token | delimiter_token
+    alt((nondelimiter_token, delimiter_token)).parse(input)
+}
+
+// TODO
+fn nondelimiter_token(input: &str) -> IResult<&str, Token> {
+    // regular_identifier
+    // | key_word
+    // | unsigned_numeric_literal
+    // | national_character_string_literal
+    // | bit_string_literal
+    // | hex_string_literal
+    // | large_object_length_token
+    // | multiplier
+    alt((
+        key_word,
+        map(multiplier, |multi: &str| match multi {
+            "K" => Token::LargeObjectLength("1K".to_string()),
+            "M" => Token::LargeObjectLength("1M".to_string()),
+            "G" => Token::LargeObjectLength("1G".to_string()),
+            _ => unreachable!(),
+        }),
+        map(large_object_length_token, |lg: &str| {
+            Token::LargeObjectLength(lg.to_string())
+        }),
+        map(unsigned_numeric_literal, |liter: &str| {
+            Token::Literal(liter.to_string())
+        }),
+        map(regular_identifier, |ident: &str| {
+            Token::Identifier(ident.to_string())
+        }),
+    ))
     .parse(input)
 }
 
 fn regular_identifier(input: &str) -> IResult<&str, &str> {
+    // identifier_body
     identifier_body.parse(input)
 }
 
 fn identifier_body(input: &str) -> IResult<&str, &str> {
+    // identifier_start identifier_part?
     recognize(pair(identifier_start, opt(identifier_part))).parse(input)
+}
+
+fn identifier_part(input: &str) -> IResult<&str, &str> {
+    // identifier_start | identifier_extend
+    alt((identifier_start, identifier_extend)).parse(input)
 }
 
 fn identifier_start(input: &str) -> IResult<&str, &str> {
     alt((alpha1, recognize(underscore))).parse(input)
 }
 
-fn identifier_part(input: &str) -> IResult<&str, &str> {
-    alt((identifier_start, identifier_extend)).parse(input)
-}
-
 fn identifier_extend(input: &str) -> IResult<&str, &str> {
     recognize(many0_count(alt((alphanumeric1, recognize(underscore))))).parse(input)
 }
 
-fn actual_identifier(input: &str) -> IResult<&str, &str> {
-    alt((regular_identifier, delimited_identifier)).parse(input)
+fn large_object_length_token(input: &str) -> IResult<&str, &str> {
+    // digit ... multiplier
+    recognize(pair(digit1, multiplier)).parse(input)
+}
+
+fn multiplier(input: &str) -> IResult<&str, &str> {
+    // 'K' | 'M' | 'G'
+    alt((tag("K"), tag("M"), tag("G"))).parse(input)
 }
 
 fn delimited_identifier(input: &str) -> IResult<&str, &str> {
+    // double_quote delimited_identifier_body double_quote
     recognize(tuple((
         double_quote,
         delimited_identifier_body,
@@ -373,21 +404,14 @@ fn delimited_identifier(input: &str) -> IResult<&str, &str> {
 }
 
 fn delimited_identifier_body(input: &str) -> IResult<&str, &str> {
+    // delimited_identifier_part ...
     recognize(many1_count(delimited_identifier_part)).parse(input)
 }
 
 fn delimited_identifier_part(input: &str) -> IResult<&str, &str> {
+    // nondoublequote_character | doublequote_symbol
     alt((nondoublequote_character, doublequote_symbol)).parse(input)
 }
-
-fn nondoublequote_character(input: &str) -> IResult<&str, &str> {
-    is_not("\"").and_then(take(1usize)).parse(input)
-}
-
-fn doublequote_symbol(input: &str) -> IResult<&str, &str> {
-    recognize(pair(double_quote, double_quote)).parse(input)
-}
-
 
 // Literal Token
 fn literal(input: &str) -> IResult<&str, &str> {
@@ -407,13 +431,13 @@ fn general_literal(input: &str) -> IResult<&str, &str> {
     character_string_literal.parse(input)
 }
 
+// TODO
 fn character_string_literal(input: &str) -> IResult<&str, &str> {
     // ( introducer character_set_specification )?
     // quote ( character_representation )? quote
     // ( separator quote ( character_representation )? quote )*
-    // character_string_literal.parse(input)
-    alt((
-        opt(pair(introducer, character_set_specification)),
+
+    recognize(tuple((
         tuple((quote, opt(character_representation), quote)),
         many0_count(tuple((
             separator,
@@ -421,7 +445,7 @@ fn character_string_literal(input: &str) -> IResult<&str, &str> {
             opt(character_representation),
             quote,
         ))),
-    ))
+    )))
     .parse(input)
 }
 
@@ -497,9 +521,140 @@ fn unsigned_integer(input: &str) -> IResult<&str, &str> {
     digit1.parse(input)
 }
 
+// Identifier Token
+fn identifier(input: &str) -> IResult<&str, Token> {
+    map(actual_identifier, |ident: &str| {
+        Token::Identifier(ident.to_string())
+    })
+    .parse(input)
+}
+
+fn actual_identifier(input: &str) -> IResult<&str, &str> {
+    alt((regular_identifier, delimited_identifier)).parse(input)
+}
+
+fn nondoublequote_character(input: &str) -> IResult<&str, &str> {
+    is_not("\"").and_then(take(1usize)).parse(input)
+}
+
+fn doublequote_symbol(input: &str) -> IResult<&str, &str> {
+    recognize(pair(double_quote, double_quote)).parse(input)
+}
+
+// TODO
+fn delimiter_token(input: &str) -> IResult<&str, Token> {
+    // character_string_literal
+    // | date_string
+    // | time_string
+    // | timestamp_string
+    // | interval_string
+    // | delimited_identifier
+    // | Unicode_delimited_identifier
+    // | SQL_special_character
+    // | not_equals_operator
+    // | greater_than_or_equals_operator
+    // | less_than_or_equals_operator
+    // | concatenation_operator
+    // | right_arrow
+    // | left_bracket_trigraph
+    // | right_bracket_trigraph
+    // | double_colon
+    // | double_period
+
+    alt((
+        map(character_string_literal, |v: &str| {
+            Token::Literal(v.to_string())
+        }),
+        map(delimited_identifier, |v: &str| {
+            Token::Identifier(v.to_string())
+        }),
+        map(not_equals_operator, |_| Token::NotEqualsOperator),
+        map(greater_than_or_equals_operator, |_| {
+            Token::GreaterThanOrEqualsOperator
+        }),
+        map(less_than_or_equals_operator, |_| {
+            Token::LessThanOrEqualsOperator
+        }),
+        map(concatenation_operator, |_| Token::ConcatenationOperator),
+        map(right_arrow, |_| Token::RightArrow),
+        map(left_bracket_trigraph, |_| Token::LeftBracketTrigraph),
+        map(right_bracket_trigraph, |_| Token::RightBracketTrigraph),
+        map(double_colon, |_| Token::DoubleColon),
+        map(double_period, |_| Token::DoublePeriod),
+    ))
+    .parse(input)
+}
+
+fn separator(input: &str) -> IResult<&str, &str> {
+    // ( comment | white_space )*
+    recognize(many0_count(alt((comment, multispace1)))).parse(input)
+}
+
+fn comment(input: &str) -> IResult<&str, &str> {
+    // simple_comment | bracketed_comment
+    alt((simple_comment, bracketed_comment)).parse(input)
+}
+
+fn simple_comment(input: &str) -> IResult<&str, &str> {
+    // simple_comment_introducer comment_character* newline
+    recognize(tuple((
+        simple_comment_introducer,
+        many0_count(comment_character),
+        newline,
+    )))
+    .parse(input)
+}
+
+fn simple_comment_introducer(input: &str) -> IResult<&str, &str> {
+    // minus_sign minus_sign  minus_sign*
+    recognize(tuple((minus_sign, minus_sign, many0_count(minus_sign)))).parse(input)
+}
+
+fn bracketed_comment(input: &str) -> IResult<&str, &str> {
+    // bracketed_comment_introducer bracketed_comment_contents bracketed_comment_terminator
+    recognize(tuple((
+        bracketed_comment_introducer,
+        bracketed_comment_contents,
+        bracketed_comment_terminator,
+    )))
+    .parse(input)
+}
+
+fn bracketed_comment_introducer(input: &str) -> IResult<&str, &str> {
+    // solidus asterisk
+    recognize(pair(solidus, asterisk)).parse(input)
+}
+
+fn bracketed_comment_terminator(input: &str) -> IResult<&str, &str> {
+    // asterisk solidus
+    recognize(pair(asterisk, solidus)).parse(input)
+}
+
+fn bracketed_comment_contents(input: &str) -> IResult<&str, &str> {
+    // ( comment_character | separator )*
+    recognize(many0_count(alt((comment_character, separator)))).parse(input)
+}
+
+fn comment_character(input: &str) -> IResult<&str, &str> {
+    // ( comment_character | separator )*
+    alt((nonquote_character, quote)).parse(input)
+}
+
+// TODO
+fn key_word(input: &str) -> IResult<&str, Token> {
+    // reserved_word | non_reserved_word
+    reserved_word.parse(input)
+}
+
+// TODO
+fn reserved_word(input: &str) -> IResult<&str, Token> {
+    // so many key word
+    alt((ADD, ALL)).parse(input)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::token::Token;
+    use crate::{lexer::token, token::Token};
 
     use super::identifier;
 
@@ -540,5 +695,68 @@ mod tests {
         let (_, res) = identifier(input).unwrap();
         let expected = Token::Identifier("\"identifier1\"\"identifier2\"".to_string());
         assert_eq!(res, expected);
+    }
+
+    #[test]
+    fn test_token_not_equals_operator() {
+        let input = "<>";
+        let (_, res) = token(input).unwrap();
+        assert_eq!(Token::NotEqualsOperator, res);
+    }
+
+    #[test]
+    fn test_token_greater_than_or_equals_operator() {
+        let input = ">=";
+        let (_, res) = token(input).unwrap();
+        assert_eq!(Token::GreaterThanOrEqualsOperator, res);
+    }
+
+    #[test]
+    fn test_token_less_than_or_equals_operator() {
+        let input = "<=";
+        let (_, res) = token(input).unwrap();
+        assert_eq!(Token::LessThanOrEqualsOperator, res);
+    }
+
+    #[test]
+    fn test_token_concatenation_operator() {
+        let input = "||";
+        let (_, res) = token(input).unwrap();
+        assert_eq!(Token::ConcatenationOperator, res);
+    }
+
+    #[test]
+    fn test_token_right_arrow() {
+        let input = "->";
+        let (_, res) = token(input).unwrap();
+        assert_eq!(Token::RightArrow, res);
+    }
+
+    #[test]
+    fn test_token_left_bracket_trigraph() {
+        let input = "??(";
+        let (_, res) = token(input).unwrap();
+        assert_eq!(Token::LeftBracketTrigraph, res);
+    }
+
+    #[test]
+    fn test_token_right_bracket_trigraph() {
+        let input = "??)";
+        let (_, res) = token(input).unwrap();
+        assert_eq!(Token::RightBracketTrigraph, res);
+    }
+
+    #[test]
+    fn test_token_double_colon() {
+        let input = "::";
+        let (_, res) = token(input).unwrap();
+        assert_eq!(Token::DoubleColon, res);
+    }
+
+    #[test]
+    fn test_token_double_period() {
+        let input = "..";
+        let (_, res) = token(input).unwrap();
+        assert_eq!(Token::DoublePeriod, res);
     }
 }

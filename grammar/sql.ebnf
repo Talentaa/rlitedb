@@ -287,14 +287,11 @@ delimiter_token    ::=
 // be adjacent with no intervening space, not a pair of characters
 // separated by arbitrary white space.
 
-not_equals_operator    ::=   "<>" //less_than_operator
-greater_than_operator
+not_equals_operator    ::=   "<>" //less_than_operator greater_than_operator
 
-greater_than_or_equals_operator    ::=   ">=" //greater_than_operator
-equals_operator
+greater_than_or_equals_operator    ::=   ">=" //greater_than_operator equals_operator
 
-less_than_or_equals_operator    ::=   "<=" //less_than_operator
-equals_operator
+less_than_or_equals_operator    ::=   "<=" //less_than_operator equals_operator
 
 concatenation_operator    ::=   "||" //vertical_bar vertical_bar
 
@@ -318,8 +315,7 @@ simple_comment_introducer    ::=   minus_sign minus_sign  minus_sign*
 // needing to be adjacent characters rather than adjacent tokens.
 
 bracketed_comment    ::=
-         bracketed_comment_introducer bracketed_comment_contents
-bracketed_comment_terminator
+         bracketed_comment_introducer bracketed_comment_contents bracketed_comment_terminator
 
 bracketed_comment_introducer    ::=   slash asterisk
 
