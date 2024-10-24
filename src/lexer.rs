@@ -475,7 +475,7 @@ fn signed_numeric_literal(input: &str) -> IResult<&str, &str> {
 
 fn unsigned_numeric_literal(input: &str) -> IResult<&str, &str> {
     // exact_numeric_literal | approximate_numeric_literal
-    alt((exact_numeric_literal, approximate_numeric_literal)).parse(input)
+    alt((approximate_numeric_literal, exact_numeric_literal)).parse(input)
 }
 
 fn exact_numeric_literal(input: &str) -> IResult<&str, &str> {
